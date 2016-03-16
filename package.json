@@ -1,0 +1,29 @@
+{
+  "name": "file_storage",
+  "version": "1.0.0",
+  "description": "File storage module for key-value data",
+  "main": "file_storage.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToPal/file_storage.git"
+  },
+  "keywords": [
+    "files",
+    "storage",
+    "key",
+    "value",
+    "local"
+  ],
+  "author": "topa <file_storage@tomsha.ru>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ToPal/file_storage/issues"
+  },
+  "homepage": "https://github.com/ToPal/file_storage#readme",
+  "dependencies": {
+    "async": "^1.5.2"
+  }
+}
