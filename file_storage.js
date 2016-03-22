@@ -48,6 +48,19 @@ Storage.prototype = {
             });
         });
     },
+    
+    getTextToSave: function () {
+        var objectToSave = {
+            timeStamp: (new Date()).getTime(),
+            data: this.data
+        };
+        
+        if (this.pretty) {
+            return JSON.stringify(objectToSave, null, '  ');
+        } else {
+            return JSON.stringify(objectToSave);
+        }
+    },
 
     saveData: function (cb) {
         var strData = JSON.stringify(this.data);
@@ -58,10 +71,7 @@ Storage.prototype = {
         async.waterfall([
             function asyncSaveToRepairFile (callback) {
                 self.fileAction(self.repairfilename, 'w', callback, function (fileHandle, faCallback) {
-                    fs.writeFile(fileHandle, JSON.stringify({
-                        timeStamp: (new Date()).getTime(),
-                        data: self.data
-                    }), faCallback);
+                    fs.writeFile(fileHandle, self.getTextToSave(), faCallback);
                 });
             }, function asyncCopyFile (callback) {
                 var isDone = false;
@@ -85,7 +95,7 @@ Storage.prototype = {
         ], cb);
     },
     
-    internalLoadData: function (fileName, cb) {
+    loadDataFromOnlyFile: function (fileName, cb) {
         if (!fs.existsSync(this.filename)) return cb(null, {});
         
         var resultObject = {};
@@ -108,10 +118,10 @@ Storage.prototype = {
         var self = this;
         async.waterfall([
             function (callback) {
-                self.internalLoadData(self.filename, callback);
+                self.loadDataFromOnlyFile(self.filename, callback);
             },
             function (mainData, callback) {
-                self.internalLoadData(self.repairfilename, 
+                self.loadDataFromOnlyFile(self.repairfilename, 
                     (err, repairData) => callback(err, mainData, repairData));
             },
             function (mainData, repairData, callback) {
@@ -122,6 +132,7 @@ Storage.prototype = {
         ], function (err, timedData) {
             if (err) return cb(err);
             self.data = timedData.data;
+            if (!self.data) self.data = {};
             cb(null, self.data);
         });
     },
