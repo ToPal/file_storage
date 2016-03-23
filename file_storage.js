@@ -44,7 +44,8 @@ Storage.prototype = {
             if (err) self.log('Error while manipulating data in file %s: %s', filename, err.message);
             if (fileHandle === 0) return cb(err);
             fs.close(fileHandle, function (closingErr) {
-                return cb(closingErr || err);
+                if (closingErr) console.log('Error while closing file %s: %s', filename, err.message);
+                return cb(err);
             });
         });
     },
@@ -73,34 +74,23 @@ Storage.prototype = {
                 self.fileAction(self.repairfilename, 'w', callback, function (fileHandle, faCallback) {
                     fs.writeFile(fileHandle, self.getTextToSave(), faCallback);
                 });
-            }, function asyncCopyFile (callback) {
-                var isDone = false;
-                function done (err) {
-                    if (isDone) return null;
-                    isDone = true;
-                    return callback(err);
-                }
-                
-                var rs = fs.createReadStream(self.repairfilename);
-                var ws = fs.createWriteStream(self.filename);
-                rs.on('error', done);
-                ws.on('error', done);
-                ws.on('close', done);
-                
-                rs.pipe(ws);
             },
-            function asyncRemoveRepairFile (callback) {
-                fs.unwatchFile(self.repairfilename, callback);
+            function asyncRenameFile (callback) {
+                if (!fs.existsSync(self.repairfilename)) {
+                    console.log('repair file is not exists');
+                    console.log('we wrote ', self.getTextToSave());
+                }
+                fs.rename(self.repairfilename, self.filename, callback);
             }
         ], cb);
     },
     
     loadDataFromOnlyFile: function (fileName, cb) {
-        if (!fs.existsSync(this.filename)) return cb(null, {});
+        if (!fs.existsSync(fileName)) return cb(null, {});
         
         var resultObject = {};
         this.fileAction(fileName, 'r', function (err) {
-            return cb(err, resultObject);
+            cb(err, resultObject);
         }, function (fileHandle, callback) {
             fs.readFile(fileHandle, 'utf8', function (err, content) {
                 if (err) return callback(err);
@@ -138,11 +128,24 @@ Storage.prototype = {
     },
 
     demon: function () {
+        if (this.timer === false) return null;
+        // console.log('demon ', this);
+        
         var self = this;
         self.saveData(function (err) {
             if (err) self.log('Error while saving data: %s', err.message);
-            setTimeout(self.demon.bind(self), self.savePeriod*1000);
+            
+            if (self.timer !== false) {
+                self.timer = setTimeout(self.demon.bind(self), self.savePeriod*1000);
+            }
         });
+    },
+    
+    stop: function () {
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
+        this.timer = false;
     }
 };
 
