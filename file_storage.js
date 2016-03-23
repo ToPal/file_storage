@@ -129,7 +129,6 @@ Storage.prototype = {
 
     demon: function () {
         if (this.timer === false) return null;
-        // console.log('demon ', this);
         
         var self = this;
         self.saveData(function (err) {
