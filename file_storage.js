@@ -30,7 +30,6 @@ var Storage = function (filename, params, cb) {
 
 Storage.prototype = {
     fileAction: function (filename, openFlag, cb, action) {
-        var self = this;
         var fileHandle = 0;
         async.waterfall([
             function (callback) {
@@ -41,7 +40,6 @@ Storage.prototype = {
                 action(fileHandle, callback);
             }
         ], function (err) {
-            if (err) self.log('Error while manipulating data in file %s: %s', filename, err.message);
             if (fileHandle === 0) return cb(err);
             fs.close(fileHandle, function (closingErr) {
                 if (closingErr) console.log('Error while closing file %s: %s', filename, err.message);
@@ -86,7 +84,7 @@ Storage.prototype = {
     },
     
     loadDataFromOnlyFile: function (fileName, cb) {
-        if (!fs.existsSync(fileName)) return cb(null, {});
+        if (!fs.existsSync(fileName)) return cb(null, null);
         
         var resultObject = {};
         this.fileAction(fileName, 'r', function (err) {
@@ -94,11 +92,23 @@ Storage.prototype = {
         }, function (fileHandle, callback) {
             fs.readFile(fileHandle, 'utf8', function (err, content) {
                 if (err) return callback(err);
+                if (content == '') {
+                    resultObject = { timeStamp: 0, data: {} };
+                    return callback(null);
+                }
+                
                 try {
                     resultObject = JSON.parse(content);
                 } catch (e) {
-                    resultObject = {};
+                    return callback(new Error('Incorrect file format'));
                 }
+                if (
+                    (resultObject.timeStamp === undefined) ||
+                    (resultObject.data      === undefined)
+                   ) {
+                    return callback(new Error('Incorrect file format'));
+                }
+                
                 return callback(null);
             });
         });
@@ -115,9 +125,13 @@ Storage.prototype = {
                     (err, repairData) => callback(err, mainData, repairData));
             },
             function (mainData, repairData, callback) {
-                if (!mainData.timeStamp) return callback(null, repairData);
-                if (!repairData.timeStamp) return callback(null, mainData);
-                callback(null, (mainData.timeStamp > repairData.timeStamp) ? mainData : repairData);
+                if ((!mainData) && (!repairData)) return callback(null, {});
+                if (!mainData) return callback(null, repairData);
+                if (!repairData) return callback(null, mainData);
+                
+                callback(null, 
+                    ((mainData || {}).timeStamp > (repairData || {}).timeStamp) ? 
+                        mainData : repairData);
             }
         ], function (err, timedData) {
             if (err) return cb(err);
